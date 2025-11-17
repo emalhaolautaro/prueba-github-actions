@@ -19,13 +19,17 @@ jobs:
       run: npx playwright install --with-deps
     - name: Run Playwright tests
       run: npx playwright test
-    - name: Trigger Render Deploy
-      # Este paso solo se ejecuta si los tests pasan y el evento es un push a 'main' o 'master'.
-      if: success() && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-      run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
         name: playwright-report
         path: playwright-report/
         retention-days: 30
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    # Se ejecuta solo en pushes a las ramas main o master y si el job 'test' fue exitoso.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    steps:
+      - name: Trigger Render Deploy
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
